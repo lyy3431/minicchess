@@ -320,6 +320,112 @@
             background: #666;
             cursor: not-allowed;
         }
+
+        /* 自定义模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+            border-radius: 12px;
+            padding: 30px 40px;
+            min-width: 300px;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-content {
+            text-align: center;
+        }
+
+        .modal-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .modal-icon.error {
+            color: #ff6b6b;
+        }
+
+        .modal-icon.success {
+            color: #51cf66;
+        }
+
+        .modal-icon.warning {
+            color: #fcc419;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .modal-message {
+            font-size: 14px;
+            color: #aaa;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .modal-button {
+            padding: 10px 30px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-button.primary {
+            background: linear-gradient(135deg, #4a6fa5, #5a8fd5);
+            color: white;
+        }
+
+        .modal-button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(74, 111, 165, 0.4);
+        }
+
+        .modal-button.danger {
+            background: linear-gradient(135deg, #c92a2a, #e03131);
+            color: white;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -377,6 +483,18 @@
             <div class="buttons">
                 <button onclick="newGame()">新游戏</button>
                 <button onclick="undoMove()">悔棋</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义模态框 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-content">
+                <div class="modal-icon" id="modalIcon"></div>
+                <div class="modal-title" id="modalTitle"></div>
+                <div class="modal-message" id="modalMessage"></div>
+                <button class="modal-button primary" id="modalBtn" onclick="closeModal()">确定</button>
             </div>
         </div>
     </div>
@@ -635,6 +753,10 @@
                         statusEl.classList.remove('player-turn');
                         isGameOver = true;  // 设置游戏结束标志
                         document.getElementById('board').classList.add('game-over');  // 棋盘变灰
+                        // 显示获胜弹窗
+                        setTimeout(() => {
+                            showModal('success', '游戏结束', result.reason || '你获胜了！');
+                        }, 300);
                         return;
                     }
 
@@ -647,10 +769,10 @@
                         await aiMove();
                     }, 500);
                 } else {
-                    alert('无效的走法！');
+                    showModal('error', '无效走法', '该走法不符合规则，请重新选择。');
                 }
             } catch (e) {
-                alert('走棋失败：' + e.message);
+                showModal('error', '走棋失败', e.message);
             }
         }
 
@@ -687,6 +809,10 @@
                     statusEl.classList.remove('player-turn');
                     isGameOver = true;  // 设置游戏结束标志
                     document.getElementById('board').classList.add('game-over');  // 棋盘变灰
+                    // 显示获胜弹窗
+                    setTimeout(() => {
+                        showModal('success', '游戏结束', result.reason || '你获胜了！');
+                    }, 300);
                 } else {
                     statusEl.textContent = '你的回合（红方）';
                     statusEl.classList.remove('thinking');
@@ -866,6 +992,45 @@
             return n.toString();
         }
 
+        // 模态框函数
+        function showModal(type, title, message) {
+            const overlay = document.getElementById('modalOverlay');
+            const icon = document.getElementById('modalIcon');
+            const titleEl = document.getElementById('modalTitle');
+            const messageEl = document.getElementById('modalMessage');
+            const btn = document.getElementById('modalBtn');
+
+            // 设置图标
+            const icons = {
+                error: '❌',
+                success: '🎉',
+                warning: '⚠️'
+            };
+            icon.textContent = icons[type] || 'ℹ️';
+            icon.className = 'modal-icon ' + type;
+
+            // 设置标题和消息
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+
+            // 设置按钮样式
+            btn.className = 'modal-button ' + (type === 'error' ? 'danger' : 'primary');
+
+            // 显示模态框
+            overlay.classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+        }
+
+        // 点击遮罩关闭模态框
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
         // 新游戏
         async function newGame() {
             const response = await fetch('/api/newgame');
@@ -894,7 +1059,7 @@
                     document.getElementById('board').classList.remove('game-over');  // 移除变灰效果
                 }
             } catch (e) {
-                alert('悔棋失败');
+                showModal('error', '悔棋失败', '无法悔棋，请重试。');
             }
         }
 
