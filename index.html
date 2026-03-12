@@ -597,6 +597,9 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    // 在更新棋盘前，先转换棋谱格式（因为 loadFEN 会改变 boardState）
+                    const chineseNotation = uciToChineseNotation(uciMove, boardState);
+
                     // 使用服务器返回的 FEN 更新棋盘
                     if (result.fen) {
                         loadFEN(result.fen);
@@ -608,7 +611,7 @@
                         renderPieces();
                     }
 
-                    addHistory(`玩家：${uciToChineseNotation(uciMove, boardState)}（${uciMove}）`);
+                    addHistory(`玩家：${chineseNotation}（${uciMove}）`);
 
                     // 检查游戏是否结束
                     if (result.gameOver) {
