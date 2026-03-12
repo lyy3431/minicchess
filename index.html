@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中国象棋人机对战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #f0d9b5;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .board-wrapper {
+            position: relative;
+            background: #e8c88b;
+            padding: 40px 30px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .board {
+            position: relative;
+            width: 320px;
+            height: 360px;
+            overflow: visible;
+        }
+
+        /* 棋盘线 */
+        .board svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 320px;
+            height: 360px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .board svg line, .board svg rect {
+            stroke: #4a3020;
+            stroke-width: 1;
+            fill: none;
+        }
+
+        /* 九宫格斜线 */
+        .palace-line {
+            stroke: #4a3020;
+            stroke-width: 1;
+        }
+
+        /* 楚河汉界 */
+        .river {
+            position: absolute;
+            top: 160px;
+            left: 0;
+            width: 320px;
+            height: 40px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .river span {
+            font-size: 20px;
+            color: #4a3020;
+            font-weight: bold;
+        }
+
+        /* 棋子点击区域 */
+        .cells {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 360px;
+            height: 400px;
+            z-index: 2;
+            overflow: visible;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: absolute;
+        }
+
+        .cell:hover::after {
+            content: '';
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border: 2px dashed rgba(255, 255, 0, 0.6);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            top: 50%;
+            left: 50%;
+        }
+
+        .cell.selected::after {
+            content: '';
+            position: absolute;
+            width: 38px;
+            height: 38px;
+            border: 3px solid rgba(0, 255, 0, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            top: 50%;
+            left: 50%;
+        }
+
+        /* 棋子 */
+        .piece {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            position: absolute;
+            z-index: 3;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+            transform: translate(-50%, -50%);
+        }
+
+        .piece.red {
+            background: radial-gradient(circle at 30% 30%, #f8e8c8, #d4a858);
+            color: #c00000;
+            border: 2px solid #8b4513;
+        }
+
+        .piece.black {
+            background: radial-gradient(circle at 30% 30%, #f0f0f0, #b0b0b0);
+            color: #111111;
+            border: 2px solid #333;
+        }
+
+        .piece.selected {
+            box-shadow: 0 0 10px 3px rgba(0, 255, 0, 0.9);
+            animation: pulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: translate(-50%, -50%) scale(1); }
+            to { transform: translate(-50%, -50%) scale(1.08); }
+        }
+
+        /* 坐标 */
+        .coordinates {
+            position: absolute;
+            font-size: 13px;
+            color: #f0d9b5;
+            font-weight: bold;
+        }
+
+        .coord-top {
+            top: -18px;
+            left: 10px;
+            display: flex;
+        }
+
+        .coord-top span {
+            width: 40px;
+            text-align: center;
+        }
+
+        .coord-bottom {
+            bottom: -18px;
+            left: 10px;
+            display: flex;
+        }
+
+        .coord-bottom span {
+            width: 40px;
+            text-align: center;
+        }
+
+        .coord-left {
+            left: -18px;
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .coord-left span {
+            height: 40px;
+            text-align: center;
+            line-height: 40px;
+        }
+
+        .coord-right {
+            right: -18px;
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .coord-right span {
+            height: 40px;
+            text-align: center;
+            line-height: 40px;
+        }
+
+        /* 信息面板 */
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            color: #f0d9b5;
+            min-width: 220px;
+        }
+
+        .info-panel h3 {
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+            color: #f0d9b5;
+        }
+
+        .status {
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .status.thinking {
+            color: #ffd700;
+        }
+
+        .status.player-turn {
+            color: #90ee90;
+        }
+
+        .move-history {
+            max-height: 280px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .move-history div {
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .buttons {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #4a6fa5;
+            color: white;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5a8fd5;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>中国象棋人机对战</h1>
+
+    <div class="game-container">
+        <div class="board-wrapper">
+            <!-- 上方坐标 -->
+            <div class="coordinates coord-top">
+                <span>九</span><span>八</span><span>七</span><span>六</span><span>五</span>
+                <span>四</span><span>三</span><span>二</span><span>一</span>
+            </div>
+
+            <!-- 棋盘 -->
+            <div class="board" id="board">
+                <!-- SVG 棋盘线 -->
+                <svg id="board-svg"></svg>
+
+                <!-- 楚河汉界 -->
+                <div class="river">
+                    <span>楚河</span>
+                    <span>汉界</span>
+                </div>
+
+                <!-- 点击区域 -->
+                <div class="cells" id="cells"></div>
+            </div>
+
+            <!-- 下方坐标 -->
+            <div class="coordinates coord-bottom">
+                <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span>
+                <span>六</span><span>七</span><span>八</span><span>九</span>
+            </div>
+
+            <!-- 左侧坐标 -->
+            <div class="coordinates coord-left">
+                <span>10</span><span>9</span><span>8</span><span>7</span><span>6</span>
+                <span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+            </div>
+
+            <!-- 右侧坐标 -->
+            <div class="coordinates coord-right">
+                <span>10</span><span>9</span><span>8</span><span>7</span><span>6</span>
+                <span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>游戏信息</h3>
+            <div class="status player-turn" id="status">你的回合（红方）</div>
+            <div>
+                <strong>走棋记录:</strong>
+                <div class="move-history" id="moveHistory"></div>
+            </div>
+            <div class="buttons">
+                <button onclick="newGame()">新游戏</button>
+                <button onclick="undoMove()">悔棋</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const board = document.getElementById('board');
+        const cellsContainer = document.getElementById('cells');
+        const statusEl = document.getElementById('status');
+        const moveHistoryEl = document.getElementById('moveHistory');
+
+        // 棋盘配置 - 所有坐标基于交叉点
+        const BOARD_CONFIG = {
+            cellSize: 40,        // 交叉点间距
+            rows: 10,            // 10 行交叉点
+            cols: 9,             // 9 列交叉点
+            boardWidth: 320,     // 棋盘线区域宽度 (8 * 40)
+            boardHeight: 360,    // 棋盘线区域高度 (9 * 40)
+            pieceSize: 36,       // 棋子直径
+            pieceRadius: 18      // 棋子半径 (用于居中)
+        };
+
+        // 计算交叉点像素坐标 (返回棋子左上角坐标，因为棋子用 transform 居中)
+        function getIntersectionPoint(col, row) {
+            return {
+                x: col * BOARD_CONFIG.cellSize,
+                y: row * BOARD_CONFIG.cellSize
+            };
+        }
+
+        // 棋子映射
+        const pieceMap = {
+            'r': { text: '车', class: 'black' },
+            'n': { text: '马', class: 'black' },
+            'b': { text: '象', class: 'black' },
+            'a': { text: '士', class: 'black' },
+            'k': { text: '将', class: 'black' },
+            'c': { text: '炮', class: 'black' },
+            'p': { text: '卒', class: 'black' },
+            'R': { text: '车', class: 'red' },
+            'N': { text: '马', class: 'red' },
+            'B': { text: '相', class: 'red' },
+            'A': { text: '仕', class: 'red' },
+            'K': { text: '帅', class: 'red' },
+            'C': { text: '炮', class: 'red' },
+            'P': { text: '兵', class: 'red' }
+        };
+
+        let selectedCell = null;
+        let boardState = [];
+        let isGameOver = false;  // 游戏结束标志
+
+        // 绘制棋盘线
+        function drawBoardLines() {
+            const svg = document.getElementById('board-svg');
+            let content = '';
+            const { cellSize, rows, cols, boardWidth, boardHeight } = BOARD_CONFIG;
+
+            // 横线 (10 条) - 每条横线在 y = row * 40 位置
+            for (let row = 0; row < rows; row++) {
+                const y = row * cellSize;
+                content += `<line x1="0" y1="${y}" x2="${boardWidth}" y2="${y}" />`;
+            }
+
+            // 竖线 (9 条)
+            for (let col = 0; col < cols; col++) {
+                const x = col * cellSize;
+                if (col === 0 || col === cols - 1) {
+                    // 左右边框竖线贯穿整个棋盘（包括楚河汉界）
+                    content += `<line x1="${x}" y1="0" x2="${x}" y2="${boardHeight}" />`;
+                } else {
+                    // 中间竖线分上下两部分
+                    content += `<line x1="${x}" y1="0" x2="${x}" y2="${4 * cellSize}" />`;
+                    content += `<line x1="${x}" y1="${5 * cellSize}" x2="${x}" y2="${boardHeight}" />`;
+                }
+            }
+
+            // 九宫格斜线 - 使用交叉点坐标
+            // 上方九宫：列 3-5 (x=120-200), 行 0-3 (y=0-120)
+            content += `<line class="palace-line" x1="${3 * cellSize}" y1="0" x2="${5 * cellSize}" y2="${2 * cellSize}" />`;
+            content += `<line class="palace-line" x1="${5 * cellSize}" y1="0" x2="${3 * cellSize}" y2="${2 * cellSize}" />`;
+            // 下方九宫：列 3-5 (x=120-200), 行 7-10 (y=280-360)
+            content += `<line class="palace-line" x1="${3 * cellSize}" y1="${7 * cellSize}" x2="${5 * cellSize}" y2="${9 * cellSize}" />`;
+            content += `<line class="palace-line" x1="${5 * cellSize}" y1="${7 * cellSize}" x2="${3 * cellSize}" y2="${9 * cellSize}" />`;
+
+            svg.innerHTML = content;
+        }
+
+        // 初始化棋盘
+        function initBoard() {
+            cellsContainer.innerHTML = '';
+            boardState = [];
+
+            for (let row = 0; row < BOARD_CONFIG.rows; row++) {
+                boardState[row] = [];
+                for (let col = 0; col < BOARD_CONFIG.cols; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+
+                    // cell 中心对准交叉点，cell 尺寸 40x40，所以左上角是 (col*40-20, row*40-20)
+                    const pos = getIntersectionPoint(col, row);
+                    cell.style.left = (pos.x - BOARD_CONFIG.cellSize / 2) + 'px';
+                    cell.style.top = (pos.y - BOARD_CONFIG.cellSize / 2) + 'px';
+
+                    cell.onclick = () => onCellClick(row, col);
+                    cellsContainer.appendChild(cell);
+                    boardState[row][col] = null;
+                }
+            }
+
+            drawBoardLines();
+        }
+
+        // 加载 FEN 局面
+        function loadFEN(fen) {
+            const parts = fen.split(' ');
+            const rows = parts[0].split('/');
+            // 清空 boardState
+            boardState = Array(10).fill(null).map(() => Array(9).fill(null));
+            for (let r = 0; r < 10; r++) {
+                let col = 0;
+                for (const ch of rows[r]) {
+                    if (ch >= '1' && ch <= '9') {
+                        col += parseInt(ch);
+                    } else {
+                        boardState[r][col] = ch;
+                        col++;
+                    }
+                }
+            }
+            renderPieces();
+        }
+
+        // 渲染棋子
+        function renderPieces() {
+            // 清除旧棋子
+            document.querySelectorAll('.piece').forEach(el => el.remove());
+
+            for (let row = 0; row < BOARD_CONFIG.rows; row++) {
+                for (let col = 0; col < BOARD_CONFIG.cols; col++) {
+                    const piece = boardState[row][col];
+                    if (piece && pieceMap[piece]) {
+                        const pieceEl = document.createElement('div');
+                        pieceEl.className = `piece ${pieceMap[piece].class}`;
+                        pieceEl.textContent = pieceMap[piece].text;
+
+                        // 棋子中心对准交叉点，使用 transform translate(-50%, -50%) 居中
+                        const pos = getIntersectionPoint(col, row);
+                        pieceEl.style.left = pos.x + 'px';
+                        pieceEl.style.top = pos.y + 'px';
+
+                        if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
+                            pieceEl.classList.add('selected');
+                        }
+
+                        pieceEl.onclick = (e) => {
+                            e.stopPropagation();
+                            onCellClick(row, col);
+                        };
+
+                        cellsContainer.appendChild(pieceEl);
+                    }
+                }
+            }
+
+            // 更新选中状态
+            document.querySelectorAll('.cell').forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
+                    cell.classList.add('selected');
+                } else {
+                    cell.classList.remove('selected');
+                }
+            });
+        }
+
+        // 格子点击处理
+        async function onCellClick(row, col) {
+            if (statusEl.classList.contains('thinking')) return;
+            if (isGameOver) return;  // 游戏结束后不能走棋
+
+            const piece = boardState[row][col];
+
+            // 如果已选中棋子
+            if (selectedCell) {
+                // 点击的是自己的棋子，取消选中或重新选择
+                if (piece && isRedPiece(piece)) {
+                    if (selectedCell.row === row && selectedCell.col === col) {
+                        selectedCell = null;
+                        renderPieces();
+                        return;
+                    }
+                    selectedCell = { row, col };
+                    renderPieces();
+                    return;
+                }
+
+                // 移动棋子
+                const move = {
+                    from: { row: selectedCell.row, col: selectedCell.col },
+                    to: { row, col }
+                };
+
+                await makeMove(move);
+                selectedCell = null;
+            } else {
+                // 选择红方棋子
+                if (piece && isRedPiece(piece)) {
+                    selectedCell = { row, col };
+                    renderPieces();
+                }
+            }
+        }
+
+        function isRedPiece(piece) {
+            return piece && piece === piece.toUpperCase();
+        }
+
+        // 执行走棋
+        async function makeMove(move) {
+            try {
+                const uciMove = toUCIMove(move);
+
+                const response = await fetch('/api/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ move: uciMove })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 使用服务器返回的 FEN 更新棋盘
+                    if (result.fen) {
+                        loadFEN(result.fen);
+                    } else {
+                        // 备用方案：手动更新
+                        const piece = boardState[move.from.row][move.from.col];
+                        boardState[move.to.row][move.to.col] = piece;
+                        boardState[move.from.row][move.from.col] = null;
+                        renderPieces();
+                    }
+
+                    addHistory(`玩家：${uciMove}`);
+
+                    // 检查游戏是否结束
+                    if (result.gameOver) {
+                        statusEl.textContent = result.reason || '游戏结束！';
+                        statusEl.classList.remove('thinking');
+                        statusEl.classList.remove('player-turn');
+                        isGameOver = true;  // 设置游戏结束标志
+                        return;
+                    }
+
+                    // AI 回合
+                    statusEl.textContent = 'AI 思考中...';
+                    statusEl.classList.add('thinking');
+                    statusEl.classList.remove('player-turn');
+
+                    setTimeout(async () => {
+                        await aiMove();
+                    }, 500);
+                } else {
+                    alert('无效的走法！');
+                }
+            } catch (e) {
+                alert('走棋失败：' + e.message);
+            }
+        }
+
+        // AI 走棋
+        async function aiMove() {
+            try {
+                const fen = toFEN();
+                const response = await fetch('/api/ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fen: fen, depth: 10 })
+                });
+
+                const result = await response.json();
+
+                // 直接使用服务器返回的 FEN 更新棋盘
+                loadFEN(result.fen);
+
+                addHistory(`AI: ${result.move}`);
+
+                if (result.gameOver) {
+                    statusEl.textContent = result.reason || '游戏结束！';
+                    statusEl.classList.remove('thinking');
+                    statusEl.classList.remove('player-turn');
+                    isGameOver = true;  // 设置游戏结束标志
+                } else {
+                    statusEl.textContent = '你的回合（红方）';
+                    statusEl.classList.remove('thinking');
+                    statusEl.classList.add('player-turn');
+                }
+            } catch (e) {
+                statusEl.textContent = 'AI 走棋失败：' + e.message;
+                statusEl.classList.remove('thinking');
+            }
+        }
+
+        // 坐标转 UCI
+        function toUCIMove(move) {
+            const fromCol = String.fromCharCode(97 + move.from.col);
+            const fromRow = 9 - move.from.row;  // board row 0(顶)=engine 9, board row 9(底)=engine 0
+            const toCol = String.fromCharCode(97 + move.to.col);
+            const toRow = 9 - move.to.row;
+            return `${fromCol}${fromRow}${toCol}${toRow}`;
+        }
+
+        // UCI 转坐标
+        function fromUCIMove(uci) {
+            return {
+                from: {
+                    col: uci.charCodeAt(0) - 97,
+                    row: 9 - parseInt(uci[1])  // engine row 9=board 0, engine row 0=board 9
+                },
+                to: {
+                    col: uci.charCodeAt(2) - 97,
+                    row: 9 - parseInt(uci[3])
+                }
+            };
+        }
+
+        // 转 FEN
+        function toFEN() {
+            let fen = '';
+            for (let r = 0; r < 10; r++) {
+                let empty = 0;
+                for (let c = 0; c < 9; c++) {
+                    const piece = boardState[r][c];
+                    if (piece) {
+                        if (empty > 0) {
+                            fen += empty;
+                            empty = 0;
+                        }
+                        fen += piece;
+                    } else {
+                        empty++;
+                    }
+                }
+                if (empty > 0) fen += empty;
+                if (r < 9) fen += '/';
+            }
+            return fen + ' w - - 0 1';
+        }
+
+        function addHistory(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            moveHistoryEl.insertBefore(div, moveHistoryEl.firstChild);
+        }
+
+        // 新游戏
+        async function newGame() {
+            const response = await fetch('/api/newgame');
+            const result = await response.json();
+            loadFEN(result.fen);
+            moveHistoryEl.innerHTML = '';
+            statusEl.textContent = '你的回合（红方）';
+            statusEl.classList.remove('thinking');
+            statusEl.classList.add('player-turn');
+            isGameOver = false;  // 重置游戏结束标志
+            selectedCell = null;
+        }
+
+        // 悔棋
+        async function undoMove() {
+            try {
+                const response = await fetch('/api/undo');
+                const result = await response.json();
+                if (result.success) {
+                    loadFEN(result.fen);
+                    statusEl.textContent = '你的回合（红方）';
+                    statusEl.classList.remove('thinking');
+                    statusEl.classList.add('player-turn');
+                    isGameOver = false;  // 悔棋后重置游戏结束标志
+                }
+            } catch (e) {
+                alert('悔棋失败');
+            }
+        }
+
+        // 页面加载时初始化
+        initBoard();
+        newGame();
+    </script>
+</body>
+</html>
