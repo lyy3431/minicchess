@@ -247,10 +247,37 @@
             min-width: 220px;
         }
 
-        .info-panel h3 {
+        .info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 15px;
             border-bottom: 1px solid rgba(255,255,255,0.3);
             padding-bottom: 10px;
+        }
+
+        .info-header h3 {
+            margin: 0;
+            color: #f0d9b5;
+        }
+
+        .info-header select {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.3);
+            color: #f0d9b5;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .info-header select:hover {
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        .info-header select option {
+            background: #2d2d2d;
             color: #f0d9b5;
         }
 
@@ -474,7 +501,14 @@
         </div>
 
         <div class="info-panel">
-            <h3>游戏信息</h3>
+            <div class="info-header">
+                <h3>游戏信息</h3>
+                <select id="aiLevel" onchange="changeAiLevel()">
+                    <option value="10">AI 棋力：低</option>
+                    <option value="15" selected>AI 棋力：中</option>
+                    <option value="20">AI 棋力：高</option>
+                </select>
+            </div>
             <div class="status player-turn" id="status">你的回合（红方）</div>
             <div>
                 <strong>走棋记录:</strong>
@@ -504,6 +538,10 @@
         const cellsContainer = document.getElementById('cells');
         const statusEl = document.getElementById('status');
         const moveHistoryEl = document.getElementById('moveHistory');
+        const aiLevelEl = document.getElementById('aiLevel');
+
+        // AI 棋力等级（搜索深度）
+        let aiDepth = 15;  // 默认为中级
 
         // 棋盘配置 - 所有坐标基于交叉点
         const BOARD_CONFIG = {
@@ -783,7 +821,7 @@
                 const response = await fetch('/api/ai', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fen: fen, depth: 10 })
+                    body: JSON.stringify({ fen: fen, depth: aiDepth })
                 });
 
                 const result = await response.json();
@@ -990,6 +1028,13 @@
             const nums = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
             if (n >= 1 && n <= 10) return nums[n - 1];
             return n.toString();
+        }
+
+        // 切换 AI 棋力等级
+        function changeAiLevel() {
+            aiDepth = parseInt(aiLevelEl.value);
+            const levelText = aiLevelEl.options[aiLevelEl.selectedIndex].text;
+            console.log('AI 棋力设置为：' + levelText + ' (深度：' + aiDepth + ')');
         }
 
         // 模态框函数
