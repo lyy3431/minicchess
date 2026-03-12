@@ -46,6 +46,11 @@
             width: 320px;
             height: 360px;
             overflow: visible;
+            transition: filter 0.3s ease;
+        }
+
+        .board.game-over {
+            filter: grayscale(80%) brightness(70%);
         }
 
         /* 棋盘线 */
@@ -629,6 +634,7 @@
                         statusEl.classList.remove('thinking');
                         statusEl.classList.remove('player-turn');
                         isGameOver = true;  // 设置游戏结束标志
+                        document.getElementById('board').classList.add('game-over');  // 棋盘变灰
                         return;
                     }
 
@@ -680,6 +686,7 @@
                     statusEl.classList.remove('thinking');
                     statusEl.classList.remove('player-turn');
                     isGameOver = true;  // 设置游戏结束标志
+                    document.getElementById('board').classList.add('game-over');  // 棋盘变灰
                 } else {
                     statusEl.textContent = '你的回合（红方）';
                     statusEl.classList.remove('thinking');
@@ -869,6 +876,7 @@
             statusEl.classList.remove('thinking');
             statusEl.classList.add('player-turn');
             isGameOver = false;  // 重置游戏结束标志
+            document.getElementById('board').classList.remove('game-over');  // 移除变灰效果
             selectedCell = null;
         }
 
@@ -883,6 +891,7 @@
                     statusEl.classList.remove('thinking');
                     statusEl.classList.add('player-turn');
                     isGameOver = false;  // 悔棋后重置游戏结束标志
+                    document.getElementById('board').classList.remove('game-over');  // 移除变灰效果
                 }
             } catch (e) {
                 alert('悔棋失败');
