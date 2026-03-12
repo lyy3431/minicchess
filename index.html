@@ -152,6 +152,7 @@
             z-index: 3;
             box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
             transform: translate(-50%, -50%);
+            transition: left 0.15s ease-in-out, top 0.15s ease-in-out;
         }
 
         .piece.red {
@@ -608,8 +609,9 @@
                     // 在更新棋盘前，先转换棋谱格式（因为 loadFEN 会改变 boardState）
                     const chineseNotation = uciToChineseNotation(uciMove, boardState);
 
-                    // 使用服务器返回的 FEN 更新棋盘
+                    // 使用服务器返回的 FEN 更新棋盘，带动画
                     if (result.fen) {
+                        await animateMove(move.from, move.to);
                         loadFEN(result.fen);
                     } else {
                         // 备用方案：手动更新
@@ -661,7 +663,14 @@
                 // 使用走棋前的棋盘状态转换棋谱
                 const chineseNotation = uciToChineseNotation(result.move, boardState);
 
-                // 直接使用服务器返回的 FEN 更新棋盘
+                // 解析 AI 走棋的起点和终点
+                const fromCol = result.move.charCodeAt(0) - 97;
+                const fromRow = 9 - parseInt(result.move[1]);
+                const toCol = result.move.charCodeAt(2) - 97;
+                const toRow = 9 - parseInt(result.move[3]);
+
+                // 带动画更新棋盘
+                await animateMove({ row: fromRow, col: fromCol }, { row: toRow, col: toCol });
                 loadFEN(result.fen);
 
                 addHistory(`AI：${chineseNotation}（${result.move}）`, 'ai');
@@ -733,6 +742,53 @@
             div.textContent = text;
             div.classList.add(type === 'ai' ? 'ai-move' : 'player-move');
             moveHistoryEl.insertBefore(div, moveHistoryEl.firstChild);
+        }
+
+        // 棋子移动动画
+        function animateMove(from, to) {
+            return new Promise(resolve => {
+                const piece = boardState[from.row][from.col];
+                if (!piece) {
+                    resolve();
+                    return;
+                }
+
+                // 找到对应的棋子元素
+                const pieces = document.querySelectorAll('.piece');
+                let pieceEl = null;
+                const fromPos = getIntersectionPoint(from.col, from.row);
+
+                for (const el of pieces) {
+                    const left = parseFloat(el.style.left) || 0;
+                    const top = parseFloat(el.style.top) || 0;
+                    // 找到位置匹配的棋子
+                    if (Math.abs(left - fromPos.x) < 5 && Math.abs(top - fromPos.y) < 5) {
+                        pieceEl = el;
+                        break;
+                    }
+                }
+
+                if (!pieceEl) {
+                    resolve();
+                    return;
+                }
+
+                // 计算目标位置
+                const toPos = getIntersectionPoint(to.col, to.row);
+
+                // 添加移动中样式
+                pieceEl.style.zIndex = '100';
+
+                // 移动到目标位置
+                pieceEl.style.left = toPos.x + 'px';
+                pieceEl.style.top = toPos.y + 'px';
+
+                // 等待动画完成
+                setTimeout(() => {
+                    pieceEl.style.zIndex = '3';
+                    resolve();
+                }, 150);
+            });
         }
 
         // UCI 走法转中国象棋棋谱格式
