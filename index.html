@@ -608,7 +608,7 @@
                         renderPieces();
                     }
 
-                    addHistory(`玩家：${uciMove}`);
+                    addHistory(`玩家：${uciToChineseNotation(uciMove, boardState)}（${uciMove}）`);
 
                     // 检查游戏是否结束
                     if (result.gameOver) {
@@ -647,10 +647,13 @@
 
                 const result = await response.json();
 
+                // 使用走棋前的棋盘状态转换棋谱
+                const chineseNotation = uciToChineseNotation(result.move, boardState);
+
                 // 直接使用服务器返回的 FEN 更新棋盘
                 loadFEN(result.fen);
 
-                addHistory(`AI: ${result.move}`);
+                addHistory(`AI：${chineseNotation}（${result.move}）`);
 
                 if (result.gameOver) {
                     statusEl.textContent = result.reason || '游戏结束！';
@@ -718,6 +721,74 @@
             const div = document.createElement('div');
             div.textContent = text;
             moveHistoryEl.insertBefore(div, moveHistoryEl.firstChild);
+        }
+
+        // UCI 走法转中国象棋棋谱格式
+        function uciToChineseNotation(uciMove, board) {
+            if (!uciMove || uciMove.length !== 4) return uciMove;
+
+            const fromCol = uciMove.charCodeAt(0) - ord('a');
+            const fromRow = 9 - parseInt(uciMove[1]);
+            const toCol = uciMove.charCodeAt(2) - ord('a');
+            const toRow = 9 - parseInt(uciMove[3]);
+
+            const piece = board[fromRow][fromCol];
+            if (!piece) return uciMove;
+
+            const isRed = piece === piece.toUpperCase();
+            const pieceType = piece.toLowerCase();
+
+            // 棋子名称
+            const pieceNames = {
+                'r': '车', 'n': '马', 'b': '象', 'a': '士', 'k': '将', 'c': '炮', 'p': '卒',
+                'R': '车', 'N': '马', 'B': '相', 'A': '仕', 'K': '帅', 'C': '炮', 'P': '兵'
+            };
+            const pieceName = pieceNames[piece] || piece;
+
+            // 起始列（红方从右到左 1-9，黑方从右到左 1-9）
+            const startNum = isRed ? (9 - fromCol) : (fromCol + 1);
+            const startNumStr = numToChinese(startNum);
+
+            // 移动类型：进/退/平
+            let moveType;
+            if (fromRow === toRow) {
+                moveType = '平';
+            } else if ((isRed && toRow < fromRow) || (!isRed && toRow > fromRow)) {
+                moveType = '进';
+            } else {
+                moveType = '退';
+            }
+
+            // 目标位置
+            let endStr;
+            if (moveType === '平') {
+                // 平走，显示目标列
+                const endNum = isRed ? (9 - toCol) : (toCol + 1);
+                endStr = numToChinese(endNum);
+            } else {
+                // 进退，显示移动的步数或目标列
+                if (['r', 'n', 'b', 'a', 'k', 'c'].includes(pieceType)) {
+                    // 车马象士将炮：进退显示步数
+                    const steps = Math.abs(toRow - fromRow);
+                    endStr = numToChinese(steps);
+                } else {
+                    // 兵卒：进退显示目标列
+                    const endNum = isRed ? (9 - toCol) : (toCol + 1);
+                    endStr = numToChinese(endNum);
+                }
+            }
+
+            return `${pieceName}${startNumStr}${moveType}${endStr}`;
+        }
+
+        function ord(c) {
+            return c.charCodeAt(0);
+        }
+
+        function numToChinese(n) {
+            const nums = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+            if (n >= 1 && n <= 10) return nums[n - 1];
+            return n.toString();
         }
 
         // 新游戏
