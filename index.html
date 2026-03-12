@@ -280,6 +280,14 @@
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
+        .move-history .player-move {
+            color: #90ee90;  /* 玩家走棋 - 浅绿色 */
+        }
+
+        .move-history .ai-move {
+            color: #87ceeb;  /* AI 走棋 - 天蓝色 */
+        }
+
         .buttons {
             margin-top: 15px;
             display: flex;
@@ -611,7 +619,7 @@
                         renderPieces();
                     }
 
-                    addHistory(`玩家：${chineseNotation}（${uciMove}）`);
+                    addHistory(`玩家：${chineseNotation}（${uciMove}）`, 'player');
 
                     // 检查游戏是否结束
                     if (result.gameOver) {
@@ -656,7 +664,7 @@
                 // 直接使用服务器返回的 FEN 更新棋盘
                 loadFEN(result.fen);
 
-                addHistory(`AI：${chineseNotation}（${result.move}）`);
+                addHistory(`AI：${chineseNotation}（${result.move}）`, 'ai');
 
                 if (result.gameOver) {
                     statusEl.textContent = result.reason || '游戏结束！';
@@ -720,9 +728,10 @@
             return fen + ' w - - 0 1';
         }
 
-        function addHistory(text) {
+        function addHistory(text, type) {
             const div = document.createElement('div');
             div.textContent = text;
+            div.classList.add(type === 'ai' ? 'ai-move' : 'player-move');
             moveHistoryEl.insertBefore(div, moveHistoryEl.firstChild);
         }
 
