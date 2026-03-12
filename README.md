@@ -61,4 +61,21 @@ python chess.py
 ## 依赖
 
 - Python 3.x
-- Pikafish 引擎（已包含）
+- Pikafish 引擎（需自行下载）
+
+## 引擎文件下载
+
+由于引擎文件较大（约 200MB），未包含在 Git 仓库中。请自行下载：
+
+1. **Pikafish 引擎**：从 [Pikafish  releases](https://github.com/nathanntg/pikafish/releases) 下载 Windows 版本
+2. **NNUE 文件**：下载 `pikafish.nnue`
+
+将下载的文件放入项目目录：
+```
+minicchess/
+  ├── pikafish-sse41-popcnt.exe  # 引擎
+  ├── pikafish.nnue              # 神经网络文件
+  ├── server.py
+  ├── chess.py
+  └── index.html
+```
